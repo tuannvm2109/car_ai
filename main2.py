@@ -4,13 +4,11 @@ import tensorflow as tf
 import keras
 import tensorflow_datasets as tfds
 import matplotlib.pyplot as plt
-import torchvision
 from tensorflow import keras
 from keras import layers
 from sklearn.model_selection import train_test_split
 import pandas as pd
 from tensorflow_datasets.core import DatasetCollectionLoader
-import torch
 from tqdm import tqdm
 
 data_augmentation = keras.Sequential(
@@ -26,10 +24,10 @@ if __name__ == '__main__':
     train_ds, validation_ds, test_ds = tfds.load(
         "cars196",
         # Reserve 10% for validation and 10% for test
-        split=["train[:40%]", "train[40%:50%]", "train[50%:60%]"],
+        split=["train", 'test[:70%]', 'test[70%:]'],
         as_supervised=True,  # Include labels
+        download=True,
     )
-
 
     print("Number of training samples: %d" % tf.data.experimental.cardinality(train_ds))
     print(
@@ -87,7 +85,7 @@ if __name__ == '__main__':
     model.summary()
 
     model.compile(
-        optimizer=keras.optimizers.Adam(),
+        optimizer=keras.optimizers.legacy.Adam(),
         loss=keras.losses.BinaryCrossentropy(from_logits=True),
         metrics=[keras.metrics.BinaryAccuracy()],
     )
@@ -99,7 +97,7 @@ if __name__ == '__main__':
     model.summary()
 
     model.compile(
-        optimizer=keras.optimizers.Adam(1e-5),  # Low learning rate
+        optimizer=keras.optimizers.legacy.Adam(1e-5),  # Low learning rate
         loss=keras.losses.BinaryCrossentropy(from_logits=True),
         metrics=[keras.metrics.BinaryAccuracy()],
     )
