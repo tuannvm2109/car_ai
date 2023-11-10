@@ -1,2 +1,4 @@
 /my_dataset/stanford_cars/cars_test
 /my_dataset/stanford_cars/cars_train
+
+*.keras

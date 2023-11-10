@@ -11,6 +11,8 @@ import pandas as pd
 from tensorflow_datasets.core import DatasetCollectionLoader
 from tqdm import tqdm
 
+from keras.utils import to_categorical
+
 data_augmentation = keras.Sequential(
     [
         layers.RandomFlip("horizontal"),
@@ -21,39 +23,40 @@ data_augmentation = keras.Sequential(
 if __name__ == '__main__':
     tfds.disable_progress_bar()
 
-    train_ds, validation_ds = tfds.load(
-        "cars196",
-
+    train_ds, validation_ds, test_ds = tfds.load(
+        "cats_vs_dogs",
         # Reserve 10% for validation and 10% for test
-        split=["train", 'test'],
+        split=["train[:40%]", "train[40%:50%]", "train[50%:60%]"],
         as_supervised=True,  # Include labels
-        download=True,
     )
 
     print("Number of training samples: %d" % tf.data.experimental.cardinality(train_ds))
     print(
         "Number of validation samples: %d" % tf.data.experimental.cardinality(validation_ds)
     )
-    # print("Number of test samples: %d" % tf.data.experimental.cardinality(test_ds))
+    print("Number of test samples: %d" % tf.data.experimental.cardinality(test_ds))
 
     plt.figure(figsize=(10, 10))
     for i, (image, label) in enumerate(train_ds.take(9)):
         ax = plt.subplot(3, 3, i + 1)
         plt.imshow(image)
-        plt.title(int(label).__str__())
+        plt.title(label)
+        # plt.title(int(label).__str__())
         plt.axis("off")
+
+    plt.show()
 
     size = (150, 150)
 
     train_ds = train_ds.map(lambda x, y: (tf.image.resize(x, size), y))
     validation_ds = validation_ds.map(lambda x, y: (tf.image.resize(x, size), y))
-    # test_ds = test_ds.map(lambda x, y: (tf.image.resize(x, size), y))
+    test_ds = test_ds.map(lambda x, y: (tf.image.resize(x, size), y))
 
     batch_size = 32
 
     train_ds = train_ds.cache().batch(batch_size).prefetch(buffer_size=10)
     validation_ds = validation_ds.cache().batch(batch_size).prefetch(buffer_size=10)
-    # test_ds = test_ds.cache().batch(batch_size).prefetch(buffer_size=10)
+    test_ds = test_ds.cache().batch(batch_size).prefetch(buffer_size=10)
 
     base_model = keras.applications.Xception(
         weights="imagenet",  # Load weights pre-trained on ImageNet.
@@ -80,18 +83,18 @@ if __name__ == '__main__':
     x = base_model(x, training=False)
     x = keras.layers.GlobalAveragePooling2D()(x)
     x = keras.layers.Dropout(0.2)(x)  # Regularize with dropout
-    outputs = keras.layers.Dense(200, activation='softmax')(x)
+    outputs = keras.layers.Dense(1)(x)
     model = keras.Model(inputs, outputs)
 
     model.summary()
 
     model.compile(
         optimizer=keras.optimizers.Adam(),
-        loss=keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+        loss=keras.losses.BinaryCrossentropy(from_logits=True),
         metrics=[keras.metrics.BinaryAccuracy()],
     )
 
-    epochs = 20
+    epochs = 10
     model.fit(train_ds, epochs=epochs, validation_data=validation_ds)
 
     base_model.trainable = True
@@ -99,11 +102,11 @@ if __name__ == '__main__':
 
     model.compile(
         optimizer=keras.optimizers.Adam(1e-5),  # Low learning rate
-        loss=keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+        loss=keras.losses.BinaryCrossentropy(from_logits=True),
         metrics=[keras.metrics.BinaryAccuracy()],
     )
 
-    epochs = 10
+    epochs = 5
     model.fit(train_ds, epochs=epochs, validation_data=validation_ds)
 
-    model.save('train_car_model.keras')
+    model.save('train_cat_and_dog_model.keras')
