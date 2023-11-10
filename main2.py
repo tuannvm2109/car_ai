@@ -23,9 +23,7 @@ if __name__ == '__main__':
 
     train_ds, validation_ds = tfds.load(
         "cars196",
-
-        # Reserve 10% for validation and 10% for test
-        split=["train", 'test'],
+        split=["train+test[:50%]", 'test[50%:]'],
         as_supervised=True,  # Include labels
         download=True,
     )
@@ -77,21 +75,32 @@ if __name__ == '__main__':
     # The base model contains batchnorm layers. We want to keep them in inference mode
     # when we unfreeze the base model for fine-tuning, so we make sure that the
     # base_model is running in inference mode here.
+    # x = base_model(x, training=False)
+    # x = keras.layers.GlobalAveragePooling2D()(x)
+    # x = keras.layers.Dropout(0.2)(x)  # Regularize with dropout
+    # outputs = keras.layers.Dense(200, activation='softmax')(x)
+
     x = base_model(x, training=False)
     x = keras.layers.GlobalAveragePooling2D()(x)
-    x = keras.layers.Dropout(0.2)(x)  # Regularize with dropout
-    outputs = keras.layers.Dense(200, activation='softmax')(x)
-    model = keras.Model(inputs, outputs)
+    # outputs1 = keras.layers.Conv2D(32, (3, 3), activation='relu', input_shape=(150, 150, 3))(x)
+    # outputs2 = keras.layers.MaxPooling2D(2, 2)(outputs1)
+    # outputs3 = keras.layers.Conv2D(64, (3, 3), activation='relu')(outputs2)
+    # outputs4 = keras.layers.MaxPooling2D(2, 2)(outputs3)
+    # outputs5 = keras.layers.Conv2D(64, (3, 3), activation='relu')(outputs4)
+    outputs6 = keras.layers.Flatten()(x)
+    outputs7 = keras.layers.Dense(64, activation='relu')(outputs6)
+    outputs8 = keras.layers.Dense(196)(outputs7)
+    model = keras.Model(inputs, outputs8)
 
     model.summary()
 
     model.compile(
         optimizer=keras.optimizers.Adam(),
         loss=keras.losses.SparseCategoricalCrossentropy(from_logits=True),
-        metrics=[keras.metrics.BinaryAccuracy()],
+        metrics=['accuracy'],
     )
 
-    epochs = 20
+    epochs = 30
     model.fit(train_ds, epochs=epochs, validation_data=validation_ds)
 
     base_model.trainable = True
@@ -100,7 +109,7 @@ if __name__ == '__main__':
     model.compile(
         optimizer=keras.optimizers.Adam(1e-5),  # Low learning rate
         loss=keras.losses.SparseCategoricalCrossentropy(from_logits=True),
-        metrics=[keras.metrics.BinaryAccuracy()],
+        metrics=['accuracy'],
     )
 
     epochs = 10

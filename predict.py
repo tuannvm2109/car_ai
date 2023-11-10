@@ -16,10 +16,10 @@ if __name__ == '__main__':
     img_width, img_height = 150, 150
 
     # load the model we saved
-    model = load_model('train_car_model.keras')
+    model = load_model('train_car_model_09_11.keras')
 
     img = tf.keras.utils.load_img(
-        'image_test/car/8.jpeg', target_size=(img_height, img_width)
+        'image_test/car/1.jpeg', target_size=(img_height, img_width)
     )
     img_array = tf.keras.utils.img_to_array(img)
     img_array = tf.expand_dims(img_array, 0) # Create a batch
